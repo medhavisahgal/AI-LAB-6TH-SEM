@@ -2,112 +2,79 @@ import matplotlib.pyplot as plt
 import numpy as np
 from collections import deque
 
-def is_valid_move(x, y, maze):
-    return 0 <= x < len(maze) and 0 <= y < len(maze[0]) and maze[x][y] == 0
+# Check if a move is valid
+def valid(x, y, m):
+    return 0 <= x < m.shape[0] and 0 <= y < m.shape[1] and m[x, y] == 0
 
-def bfs(queue, visited, parent):
-    (x, y) = queue.popleft()
-    directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]  # Up, Down, Left, Right moves
-    for dx, dy in directions:
+# Perform BFS for one direction
+def bfs(q, v, p, m):
+    x, y = q.popleft()
+    for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
         nx, ny = x + dx, y + dy
-        if is_valid_move(nx, ny, maze) and (nx, ny) not in visited:
-            queue.append((nx, ny))
-            visited.add((nx, ny))
-            parent[(nx, ny)] = (x, y)
+        if valid(nx, ny, m) and (nx, ny) not in v:
+            q.append((nx, ny))
+            v.add((nx, ny))
+            p[(nx, ny)] = (x, y)
 
-def bidirectional_search(maze, start, goal):
-    if maze[start[0]][start[1]] == 1 or maze[goal[0]][goal[1]] == 1:
+# Bidirectional search
+def bidir(m, s, g):
+    if m[s] == 1 or m[g] == 1:
         return None, None, None
-    
-    queue_start = deque([start])
-    queue_goal = deque([goal])
-    visited_start = set([start])
-    visited_goal = set([goal])
-    parent_start = {start: None}
-    parent_goal = {goal: None}
-    
-    while queue_start and queue_goal:
-        bfs(queue_start, visited_start, parent_start)
-        bfs(queue_goal, visited_goal, parent_goal)
-        
-        # Check for intersection
-        intersect_node = None
-        for node in visited_start:
-            if node in visited_goal:
-                intersect_node = node
-                break
-        
-        if intersect_node is not None:
-            return (intersect_node, parent_start, parent_goal)
-    
-    return (None, None, None)
 
-def reconstruct_path(intersect_node, parent_start, parent_goal):
-    if intersect_node is None:
+    qs, qg = deque([s]), deque([g])
+    vs, vg = {s}, {g}
+    ps, pg = {s: None}, {g: None}
+
+    while qs and qg:
+        bfs(qs, vs, ps, m)
+        bfs(qg, vg, pg, m)
+        for n in vs:
+            if n in vg:
+                return n, ps, pg
+    return None, None, None
+
+# Reconstruct path from start to goal
+def build_path(n, ps, pg):
+    if n is None:
         return []
-    
     path = []
-    # from start to intersection
-    step = intersect_node
-    while step is not None:
-        path.append(step)
-        step = parent_start[step]
+    while n is not None:
+        path.append(n)
+        n = ps[n]
     path.reverse()
-    
-    # from intersection to goal
-    step = parent_goal[intersect_node]
-    while step is not None:
-        path.append(step)
-        step = parent_goal[step]
-    
+    n = pg[path[-1]]
+    while n is not None:
+        path.append(n)
+        n = pg[n]
     return path
 
-def visualize(maze, path, start, goal):
-    maze_copy = np.array(maze)
-    fig, ax = plt.subplots(figsize=(10, 10))
-    
-    # Coloring the maze
-    cmap = plt.cm.Dark2
-    colors = {'empty': 0, 'wall': 1, 'path': 2}
-    for y in range(len(maze)):
-        for x in range(len(maze[0])):
-            color = 'white' if maze[y][x] == 0 else 'black'
-            ax.fill_between([x, x+1], y, y+1, color=color)
-
-    # Drawing the path
-    if path:
-        for (y, x) in path:
-            ax.fill_between([x, x+1], y, y+1, color='gold', alpha=0.5)
-    
-    # Mark start and goal
-    sy, sx = start
-    gy, gx = goal
-    ax.plot(sx+0.5, sy+0.5, 'go')  # green dot at start
-    ax.plot(gx+0.5, gy+0.5, 'ro')  # red dot at goal
-
-    # Set limits and grid
-    ax.set_xlim(0, len(maze[0]))
-    ax.set_ylim(0, len(maze))
-    ax.set_xticks(range(len(maze[0])))
-    ax.set_yticks(range(len(maze)))
-    ax.grid(which='both')
-    ax.invert_yaxis()  # Invert the y-axis so the first row is at the top
-    ax.xaxis.tick_top()  # and the x-axis is on the top
-
+# Visualize the maze and path
+def show(m, p, s, g):
+    fig, ax = plt.subplots(figsize=(6, 6))
+    for y in range(m.shape[0]):
+        for x in range(m.shape[1]):
+            color = 'white' if m[y, x] == 0 else 'black'
+            ax.fill_between([x, x + 1], y, y + 1, color=color)
+    for y, x in p:
+        ax.fill_between([x, x + 1], y, y + 1, color='gold', alpha=0.5)
+    ax.plot(s[1] + 0.5, s[0] + 0.5, 'go')  # Start
+    ax.plot(g[1] + 0.5, g[0] + 0.5, 'ro')  # Goal
+    ax.set_xlim(0, m.shape[1])
+    ax.set_ylim(0, m.shape[0])
+    ax.grid(True)
+    ax.invert_yaxis()
     plt.show()
 
-# Define the maze
-maze = [
+# Define maze as a NumPy array
+maze = np.array([
     [0, 1, 0, 0, 0],
     [0, 1, 0, 1, 0],
     [0, 0, 0, 1, 0],
     [0, 1, 0, 0, 0],
     [0, 0, 0, 1, 0]
-]
+])
 
-start = (0, 0)
-goal = (4, 4)
-
-intersect_node, parent_start, parent_goal = bidirectional_search(maze, start, goal)
-path = reconstruct_path(intersect_node, parent_start, parent_goal)
-visualize(maze, path, start, goal)
+start, goal = (0, 0), (4, 4)
+node, ps, pg = bidir(maze, start, goal)
+path = build_path(node, ps, pg)
+show(maze, path, start, goal)

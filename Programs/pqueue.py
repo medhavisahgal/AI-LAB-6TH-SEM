@@ -1,50 +1,48 @@
-from pyamaze import maze,agent,COLOR,textLabel
+from pyamaze import maze, agent, textLabel
 from queue import PriorityQueue
 
-def manhattan_distance(cell, goal):
-    return abs(cell[0] - goal[0]) + abs(cell[1] - goal[1])
+def man_dist(c, g):
+    return abs(c[0] - g[0]) + abs(c[1] - g[1])
 
-def BestFirstSearch(m):
-    goal = (1, 1)
-    start = (m.rows, m.cols)
-    frontier = PriorityQueue()
-    frontier.put((manhattan_distance(start, goal), start))
-    explored = {start}
-    bfsPath = {}
-    
-    while not frontier.empty():
-        current_cost, currCell = frontier.get()
-        if currCell == goal:
+def bfs(m):
+    g = (1, 1)
+    s = (m.rows, m.cols)
+    pq = PriorityQueue()
+    pq.put((man_dist(s, g), s))
+    v = {s}
+    p = {}
+
+    while not pq.empty():
+        _, curr = pq.get()
+        if curr == g:
             break
-            
         for d in 'ESNW':
-            if m.maze_map[currCell][d] == True:
+            if m.maze_map[curr][d]:
                 if d == 'E':
-                    childCell = (currCell[0], currCell[1] + 1)
+                    n = (curr[0], curr[1] + 1)
                 elif d == 'W':
-                    childCell = (currCell[0], currCell[1] - 1)
+                    n = (curr[0], curr[1] - 1)
                 elif d == 'N':
-                    childCell = (currCell[0] - 1, currCell[1])
+                    n = (curr[0] - 1, curr[1])
                 elif d == 'S':
-                    childCell = (currCell[0] + 1, currCell[1])
-                
-                if childCell not in explored:
-                    frontier.put((manhattan_distance(childCell, goal), childCell))
-                    explored.add(childCell)
-                    bfsPath[childCell] = currCell
-    
-    fwdPath = {}
-    cell = goal
-    while cell != start:
-        fwdPath[bfsPath[cell]] = cell
-        cell = bfsPath[cell]
-    return fwdPath
+                    n = (curr[0] + 1, curr[1])
+                if n not in v:
+                    pq.put((man_dist(n, g), n))
+                    v.add(n)
+                    p[n] = curr
+
+    path = {}
+    c = g
+    while c != s:
+        path[p[c]] = c
+        c = p[c]
+    return path
 
 if __name__ == '__main__':
     m = maze(5, 7)
     m.CreateMaze(loopPercent=40)
-    path = BestFirstSearch(m)
+    path = bfs(m)
     a = agent(m, footprints=True, filled=True)
-    m.tracePath({a:path})
-    l = textLabel(m, 'Length of Best First Path', len(path) + 1)
+    m.tracePath({a: path})
+    textLabel(m, 'Best First Path Length', len(path) + 1)
     m.run()
