@@ -100,7 +100,7 @@ class TicTacToe:
             elif "" not in self.board:
                 self.handle_game_end("Tie")
             else:
-                self.game_active = False  # Temporarily disable board
+                self.game_active = False  
                 self.window.after(500, lambda: self.ai_move())  
 
     def ai_move(self):
