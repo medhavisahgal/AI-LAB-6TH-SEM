@@ -5,7 +5,7 @@ import random
 class CuteSnakeAndLadder:
     def __init__(self):
         self.window = tk.Tk()
-        self.window.title("🐰🐻 Cute Snake & Ladder")
+        self.window.title("Snake & Ladder")
         self.window.geometry("550x600")
         self.window.configure(bg="#FFEBF6")  # Light Pink Background
 
