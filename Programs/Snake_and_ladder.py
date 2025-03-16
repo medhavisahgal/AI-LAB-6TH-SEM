@@ -4,8 +4,8 @@ import time
 from PIL import Image, ImageTk
 
 # Snakes and Ladders positions
-snakes = {96: 42, 94: 71, 75: 32, 48: 16, 37: 3, 28: 10}
-ladders = {4: 56, 12: 50, 14: 55, 22: 58, 41: 79, 54: 88}
+snakes = {97: 61, 91: 73, 76: 54, 51: 10, 38: 20}
+ladders = {5: 58, 14: 49, 53: 72, 64: 83}
 
 class SnakesLaddersGame:
     def __init__(self, master):
@@ -16,7 +16,7 @@ class SnakesLaddersGame:
         self.canvas.pack()
         
         # Load and display the board image
-        self.board_image = Image.open(r"C:\Users\KIIT\Desktop\Work\AI-LAB-6TH-SEM\board.png")
+        self.board_image = Image.open(r"C:\Users\KIIT\Desktop\Work\AI-LAB-6TH-SEM\board.jpg")
         self.board_image = self.board_image.resize((600, 600), Image.Resampling.LANCZOS)
         self.board_photo = ImageTk.PhotoImage(self.board_image)
         self.canvas.create_image(0, 0, anchor=tk.NW, image=self.board_photo)
