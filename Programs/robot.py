@@ -1,149 +1,132 @@
 import math
 import heapq
+import tkinter as tk
 
-# Define the Cell class
 class Cell:
     def __init__(self):
-        self.parent_i = 0  # Parent cell's row index
-        self.parent_j = 0  # Parent cell's column index
-        self.f = float('inf')  # Total cost of the cell (g + h)
-        self.g = float('inf')  # Cost from start to this cell
-        self.h = 0  # Heuristic cost from this cell to destination
+        self.parent_i = 0
+        self.parent_j = 0
+        self.f = float('inf')
+        self.g = float('inf')
+        self.h = 0
 
-# Define the size of the grid
 ROW = 9
 COL = 10
+CELL_SIZE = 60
 
-# Check if a cell is valid (within the grid)
+COLORS = {
+    'blocked': '#8b0000',        # Dark red
+    'unblocked': '#ffffff',      # White
+    'start': '#32CD32',          # Lime green
+    'end': '#1E90FF',           # Dodger blue
+    'path': '#FFD700'           # Gold
+}
+
 def is_valid(row, col):
-    return (row >= 0) and (row < ROW) and (col >= 0) and (col < COL)
+    return 0 <= row < ROW and 0 <= col < COL
 
-# Check if a cell is unblocked
 def is_unblocked(grid, row, col):
     return grid[row][col] == 1
 
-# Check if a cell is the destination
-def is_destination(row, col, dest):
-    return row == dest[0] and col == dest[1]
-
-# Calculate the heuristic value of a cell (Euclidean distance to destination)
 def calculate_h_value(row, col, dest):
-    return ((row - dest[0]) ** 2 + (col - dest[1]) ** 2) ** 0.5
+    return abs(row - dest[0]) + abs(col - dest[1])  # Manhattan distance
 
-# Trace the path from source to destination
 def trace_path(cell_details, dest):
-    print("The Path is ")
     path = []
-    row = dest[0]
-    col = dest[1]
-
-    # Trace the path from destination to source using parent cells
+    row, col = dest
     while not (cell_details[row][col].parent_i == row and cell_details[row][col].parent_j == col):
         path.append((row, col))
-        temp_row = cell_details[row][col].parent_i
-        temp_col = cell_details[row][col].parent_j
-        row = temp_row
-        col = temp_col
-
-    # Add the source cell to the path
+        row, col = cell_details[row][col].parent_i, cell_details[row][col].parent_j
     path.append((row, col))
-    # Reverse the path to get the path from source to destination
-    path.reverse()
+    return path[::-1]
 
-    # Print the path
-    for i in path:
-        print("->", i, end=" ")
-    print()
-
-# Implement the A* search algorithm
 def a_star_search(grid, src, dest):
-    # Check if the source and destination are valid
-    if not is_valid(src[0], src[1]) or not is_valid(dest[0], dest[1]):
-        print("Source or destination is invalid")
-        return
+    if not all(is_valid(*p) for p in [src, dest]):
+        print("Invalid source or destination")
+        return None
 
-    # Check if the source and destination are unblocked
-    if not is_unblocked(grid, src[0], src[1]) or not is_unblocked(grid, dest[0], dest[1]):
-        print("Source or the destination is blocked")
-        return
+    if not all(is_unblocked(grid, *p) for p in [src, dest]):
+        print("Source or destination is blocked")
+        return None
 
-    # Check if we are already at the destination
-    if is_destination(src[0], src[1], dest):
-        print("We are already at the destination")
-        return
+    if src == dest:
+        return [src]
 
-    # Initialize the closed list (visited cells)
-    closed_list = [[False for _ in range(COL)] for _ in range(ROW)]
-    # Initialize the details of each cell
+    closed_list = [[False]*COL for _ in range(ROW)]
     cell_details = [[Cell() for _ in range(COL)] for _ in range(ROW)]
 
-    # Initialize the start cell details
-    i = src[0]
-    j = src[1]
-    cell_details[i][j].f = 0
-    cell_details[i][j].g = 0
-    cell_details[i][j].h = 0
-    cell_details[i][j].parent_i = i
-    cell_details[i][j].parent_j = j
+    i, j = src
+    cell_details[i][j].f = cell_details[i][j].g = cell_details[i][j].h = 0
+    cell_details[i][j].parent_i, cell_details[i][j].parent_j = i, j
 
-    # Initialize the open list (cells to be visited) with the start cell
     open_list = []
     heapq.heappush(open_list, (0.0, i, j))
 
-    # Initialize the flag for whether destination is found
-    found_dest = False
+    while open_list:
+        current = heapq.heappop(open_list)
+        i, j = current[1], current[2]
 
-    # Main loop of A* search algorithm
-    while len(open_list) > 0:
-        # Pop the cell with the smallest f value from the open list
-        p = heapq.heappop(open_list)
-
-        # Mark the cell as visited
-        i = p[1]
-        j = p[2]
+        if closed_list[i][j]:
+            continue
         closed_list[i][j] = True
 
-        # For each direction, check the successors
-        directions = [(0, 1), (0, -1), (1, 0), (-1, 0), (1, 1), (1, -1), (-1, 1), (-1, -1)]
-        for dir in directions:
-            new_i = i + dir[0]
-            new_j = j + dir[1]
+        for dx, dy in [(-1,0),(1,0),(0,-1),(0,1)]:  # Only 4 directions for Manhattan
+            ni, nj = i+dx, j+dy
+            if is_valid(ni, nj) and is_unblocked(grid, ni, nj) and not closed_list[ni][nj]:
+                if (ni, nj) == dest:
+                    cell_details[ni][nj].parent_i, cell_details[ni][nj].parent_j = i, j
+                    return trace_path(cell_details, dest)
+                g_new = cell_details[i][j].g + 1
+                if g_new < cell_details[ni][nj].g:
+                    cell_details[ni][nj].g = g_new
+                    cell_details[ni][nj].h = calculate_h_value(ni, nj, dest)
+                    cell_details[ni][nj].f = g_new + cell_details[ni][nj].h
+                    cell_details[ni][nj].parent_i, cell_details[ni][nj].parent_j = i, j
+                    heapq.heappush(open_list, (cell_details[ni][nj].f, ni, nj))
 
-            # If the successor is valid, unblocked, and not visited
-            if is_valid(new_i, new_j) and is_unblocked(grid, new_i, new_j) and not closed_list[new_i][new_j]:
-                # If the successor is the destination
-                if is_destination(new_i, new_j, dest):
-                    # Set the parent of the destination cell
-                    cell_details[new_i][new_j].parent_i = i
-                    cell_details[new_i][new_j].parent_j = j
-                    print("The destination cell is found")
-                    # Trace and print the path from source to destination
-                    trace_path(cell_details, dest)
-                    found_dest = True
-                    return
-                else:
-                    # Calculate the new f, g, and h values
-                    g_new = cell_details[i][j].g + 1.0
-                    h_new = calculate_h_value(new_i, new_j, dest)
-                    f_new = g_new + h_new
+    print("Path not found")
+    return None
 
-                    # If the cell is not in the open list or the new f value is smaller
-                    if cell_details[new_i][new_j].f == float('inf') or cell_details[new_i][new_j].f > f_new:
-                        # Add the cell to the open list
-                        heapq.heappush(open_list, (f_new, new_i, new_j))
-                        # Update the cell details
-                        cell_details[new_i][new_j].f = f_new
-                        cell_details[new_i][new_j].g = g_new
-                        cell_details[new_i][new_j].h = h_new
-                        cell_details[new_i][new_j].parent_i = i
-                        cell_details[new_i][new_j].parent_j = j
-
-    # If the destination is not found after visiting all cells
-    if not found_dest:
-        print("Failed to find the destination cell")
+class PathVisualizer(tk.Tk):
+    def __init__(self, grid, path, src, dest):
+        super().__init__()
+        self.title("A* Pathfinding Visualization")
+        self.grid = grid
+        self.path = path
+        self.src = src
+        self.dest = dest
+        self.canvas = tk.Canvas(self, 
+                              width=COL*CELL_SIZE, 
+                              height=ROW*CELL_SIZE,
+                              bg='white')
+        self.canvas.pack()
+        self.draw_grid()
+        
+    def draw_grid(self):
+        for row in range(ROW):
+            for col in range(COL):
+                x1 = col * CELL_SIZE
+                y1 = row * CELL_SIZE
+                x2 = x1 + CELL_SIZE
+                y2 = y1 + CELL_SIZE
+                
+                color = COLORS['unblocked']
+                if self.grid[row][col] == 0:
+                    color = COLORS['blocked']
+                elif (row, col) == self.src:
+                    color = COLORS['start']
+                elif (row, col) == self.dest:
+                    color = COLORS['end']
+                elif self.path and (row, col) in self.path:
+                    color = COLORS['path']
+                
+                self.canvas.create_rectangle(x1, y1, x2, y2, 
+                                           fill=color, outline='#696969')
+                if self.grid[row][col] == 0:
+                    self.canvas.create_line(x1, y1, x2, y2, fill='black', width=2)
+                    self.canvas.create_line(x1, y2, x2, y1, fill='black', width=2)
 
 def main():
-    # Define the grid (1 for unblocked, 0 for blocked)
     grid = [
         [1, 0, 1, 1, 1, 1, 0, 1, 1, 1],
         [1, 1, 1, 0, 1, 1, 1, 0, 1, 1],
@@ -155,13 +138,17 @@ def main():
         [1, 0, 1, 1, 1, 1, 0, 1, 1, 1],
         [1, 1, 1, 0, 0, 0, 1, 0, 0, 1]
     ]
-
-    # Define the source and destination
-    src = [8, 0]
-    dest = [0, 0]
-
-    # Run the A* search algorithm
-    a_star_search(grid, src, dest)
+    
+    src = (8, 0)
+    dest = (0, 0)
+    path = a_star_search(grid, src, dest)
+    
+    if path:
+        print("Path found:", path)
+        app = PathVisualizer(grid, path, src, dest)
+        app.mainloop()
+    else:
+        print("No path found")
 
 if __name__ == "__main__":
     main()
